@@ -242,21 +242,27 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             /* List the ciphers that are permitted to negotiate. */
             try {
                 if (unmodifiableCiphers.isEmpty()) {
-                    // Set non TLSv1.3 ciphers.
-                    SSLContext.setCipherSuite(ctx, StringUtil.EMPTY_STRING, false);
-                    if (tlsv13Supported) {
-                        // Set TLSv1.3 ciphers.
-                        SSLContext.setCipherSuite(ctx, StringUtil.EMPTY_STRING, true);
+                    if (!OpenSsl.isBoringSSL()) {
+                        // Set non TLSv1.3 ciphers.
+                        SSLContext.setCipherSuite(ctx, StringUtil.EMPTY_STRING, false);
+                        if (tlsv13Supported) {
+                            // Set TLSv1.3 ciphers.
+                            SSLContext.setCipherSuite(ctx, StringUtil.EMPTY_STRING, true);
+                        }
                     }
                 } else {
                     CipherSuiteConverter.convertToCipherStrings(
                             unmodifiableCiphers, cipherBuilder, cipherTLSv13Builder);
 
-                    // Set non TLSv1.3 ciphers.
-                    SSLContext.setCipherSuite(ctx, cipherBuilder.toString(), false);
+                    if (!OpenSsl.isBoringSSL() || cipherBuilder.length() > 0) {
+                        SSLContext.setCipherSuite(ctx, cipherBuilder.toString(), false);
+                    }
+
                     if (tlsv13Supported) {
                         // Set TLSv1.3 ciphers.
-                        SSLContext.setCipherSuite(ctx, cipherTLSv13Builder.toString(), true);
+                        if (!OpenSsl.isBoringSSL() || cipherTLSv13Builder.length() > 0) {
+                            SSLContext.setCipherSuite(ctx, cipherTLSv13Builder.toString(), true);
+                        }
                     }
                 }
             } catch (SSLException e) {
